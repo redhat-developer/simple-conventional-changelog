@@ -70,11 +70,13 @@ export class ChangelogBuilder {
         const link = val.html_url || '#';
       
         const nameCommitType = commitFullMessage.substring(0, colonIndex);
-        // get type + scope from nameCommitType
-        const scopeRgx = new RegExp(/\((.*?)\)/, 'g');
-        const scopeObj: RegExpExecArray = scopeRgx.exec(nameCommitType);
-        let scope = !scopeObj ? '' : scopeObj.length > 1 ? scopeObj[1] : scopeObj[0];
+        // get type + scope from nameCommitType using linear string scanning
+        // (avoids catastrophic regex backtracking on crafted input, CWE-1333)
         const parenthesisIndex = nameCommitType.indexOf('(');
+        const closeParenthesisIndex = parenthesisIndex === -1 ? -1 : nameCommitType.indexOf(')', parenthesisIndex + 1);
+        let scope = (parenthesisIndex !== -1 && closeParenthesisIndex !== -1)
+          ? nameCommitType.substring(parenthesisIndex + 1, closeParenthesisIndex)
+          : '';
         const commitType = parenthesisIndex !== -1 ? nameCommitType.substring(0, parenthesisIndex) : nameCommitType;
 
         const commitTypeObject = this.commitTypes.find((value) => commitType === value.type);
